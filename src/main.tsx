@@ -9,7 +9,7 @@ import { AuthProvider } from './context/AuthContext';
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <Router>
+    <Router basename='api_key_manager'>
       <ThemeProvider>
         <AuthProvider>
           <ApiKeyProvider>
