@@ -21,6 +21,7 @@ app.use(express.json());
 
 // Database connection pool
 let pool;
+let connection;
 
 
 
@@ -30,7 +31,7 @@ const dbConfig = {
   host: process.env.DB_HOST || 'localhost',
   user: process.env.DB_USER || 'root',
   password: process.env.DB_PASSWORD || '123456',
-  // database: process.env.DB_NAME || 'api_key_manager',
+  database: process.env.DB_NAME || 'api_key_manager',
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 0
@@ -41,15 +42,19 @@ async function initializeDatabase() {
   try {
     // Create connection pool
     pool = mysql.createPool(dbConfig);
+    try {
+      connection = await pool.getConnection();
+    } catch (error) {
+      const newConfig = {...dbConfig}
+      delete newConfig.database;
+      pool = mysql.createPool(newConfig);
+      connection = await pool.getConnection();
+      await connection.execute('CREATE DATABASE IF NOT EXISTS api_key_manager');
+      await connection.release();
+      pool = mysql.createPool(dbConfig);
+      connection = await pool.getConnection();
+    }
     
-    // Test connection
-    const connection = await pool.getConnection();
-    console.log('Connected to MySQL database');
-    await connection.execute('CREATE DATABASE IF NOT EXISTS api_key_manager');
-    console.log('数据库 api_key_manager 创建成功');
-    // 选择数据库
-    await connection.query('USE api_key_manager');
-    console.log('已选择数据库 api_key_manager');
     // Create tables if they don't exist
     await connection.query(`
       CREATE TABLE IF NOT EXISTS api_keys (

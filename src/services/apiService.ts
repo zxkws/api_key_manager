@@ -2,6 +2,15 @@ import { ApiKey } from '../types';
 import { ApiClient } from './apiClient';
 
 class ApiKeyService extends ApiClient {
+  constructor() {
+    super(); 
+    // Bind methods to ensure 'this' context
+    this.fetchApiKeys = this.fetchApiKeys.bind(this);
+    this.fetchApiKeyById = this.fetchApiKeyById.bind(this);
+    this.createApiKey = this.createApiKey.bind(this);
+    this.updateApiKey = this.updateApiKey.bind(this);
+    this.deleteApiKey = this.deleteApiKey.bind(this);
+  }
   async fetchApiKeys(): Promise<ApiKey[]> {
     return this.get<ApiKey[]>('/api-keys');
   }
