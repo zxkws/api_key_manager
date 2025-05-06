@@ -1,0 +1,61 @@
+name: deploy_gh_pages
+
+on:
+  push:
+    branches:
+    - main
+    paths-ignore:
+      - README.md
+      - server/**
+
+jobs:
+  my_job:
+    name: Deploy to GitHub Pages
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22.x'
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8
+
+      - name: Get pnpm store directory
+        id: pnpm-cache
+        shell: bash
+        run: |
+            echo "STORE_PATH=$(pnpm store path)" >> $GITHUB_OUTPUT
+
+      - uses: actions/cache@v3
+        name: Setup pnpm cache
+        with:
+          path: ${{ steps.pnpm-cache.outputs.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
+
+      - name: Install Dependencies
+        run: |
+          pnpm install
+          pnpm build
+
+      - name: Deploy to GitHub Pages
+        env:
+            GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+            git config --global user.name "${{ github.actor }}"
+            git config --global user.email "${{ github.actor }}@users.noreply.github.com"
+            git checkout --orphan gh-pages
+            git rm -rf .
+            mv dist/* .
+            rm -rf node_modules
+            cp index.html 404.html
+            touch .nojekyll
+            git add .
+            git commit -m "Deploy to GitHub Pages"
+            git push -f origin gh-pages
