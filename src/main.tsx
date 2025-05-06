@@ -5,14 +5,17 @@ import App from './App';
 import './index.css';
 import { ThemeProvider } from './context/ThemeContext';
 import { ApiKeyProvider } from './context/ApiKeyContext';
+import { AuthProvider } from './context/AuthContext';
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <Router>
       <ThemeProvider>
-        <ApiKeyProvider>
-          <App />
-        </ApiKeyProvider>
+        <AuthProvider>
+          <ApiKeyProvider>
+            <App />
+          </ApiKeyProvider>
+        </AuthProvider>
       </ThemeProvider>
     </Router>
   </StrictMode>

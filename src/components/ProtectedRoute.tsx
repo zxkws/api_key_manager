@@ -1,0 +1,23 @@
+import React from 'react';
+import { Navigate, useLocation } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
+
+interface ProtectedRouteProps {
+  children: React.ReactNode;
+}
+
+const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
+  const { isAuthenticated } = useAuth();
+  const location = useLocation();
+
+  if (!isAuthenticated) {
+    // Redirect to your existing auth system's login page
+    // Replace this URL with your actual auth system login URL
+    window.location.href = `${import.meta.env.VITE_AUTH_URL}/login?redirect=${window.location.origin}${location.pathname}`;
+    return null;
+  }
+
+  return <>{children}</>;
+};
+
+export default ProtectedRoute
