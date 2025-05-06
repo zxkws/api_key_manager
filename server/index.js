@@ -46,7 +46,7 @@ async function initializeDatabase() {
     try {
       connection = await pool.getConnection();
     } catch (error) {
-      const newConfig = {...dbConfig}
+      const newConfig = {...dbConfig};
       delete newConfig.database;
       pool = mysql.createPool(newConfig);
       connection = await pool.getConnection();
@@ -68,7 +68,8 @@ async function initializeDatabase() {
         category VARCHAR(50) DEFAULT 'General',
         is_active BOOLEAN DEFAULT true,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        user_id VARCHAR(36) NOT NULL
       )
     `);
     
@@ -115,11 +116,13 @@ app.use(authMiddleware);
 // API Routes
 app.get('/api/api-keys', async (req, res) => {
   try {
+    const userId = req.user.userId;
     if (pool) {
-      const apiKeys = await query('SELECT * FROM api_keys ORDER BY updated_at DESC');
+      const apiKeys = await query('SELECT * FROM api_keys WHERE user_id = ? ORDER BY updated_at DESC', [userId]);
       res.json(toCamelCase(apiKeys));
     } else {
-      res.json(global.inMemoryApiKeys);
+      const userApiKeys = global.inMemoryApiKeys.filter(key => key.userId === userId);
+      res.json(userApiKeys);
     }
   } catch (error) {
     res.status(500).json({ error: 'Failed to fetch API keys' });
@@ -129,9 +132,10 @@ app.get('/api/api-keys', async (req, res) => {
 app.get('/api/api-keys/:id', async (req, res) => {
   try {
     const { id } = req.params;
+    const userId = req.user.userId;
     
     if (pool) {
-      const [apiKey] = await query('SELECT * FROM api_keys WHERE id = ?', [id]);
+      const [apiKey] = await query('SELECT * FROM api_keys WHERE id = ? AND user_id = ?', [id, userId]);
       
       if (!apiKey) {
         return res.status(404).json({ error: 'API key not found' });
@@ -139,7 +143,7 @@ app.get('/api/api-keys/:id', async (req, res) => {
       
       res.json(toCamelCase([apiKey])[0]);
     } else {
-      const apiKey = global.inMemoryApiKeys.find(key => key.id === id);
+      const apiKey = global.inMemoryApiKeys.find(key => key.id === id && key.userId === userId);
       
       if (!apiKey) {
         return res.status(404).json({ error: 'API key not found' });
@@ -163,6 +167,7 @@ app.post('/api/api-keys', async (req, res) => {
       category,
       isActive
     } = req.body;
+    const userId = req.user.userId;
     
     // Generate UUID
     const id = crypto.randomUUID();
@@ -171,11 +176,11 @@ app.post('/api/api-keys', async (req, res) => {
     
     if (pool) {
       await query(
-        'INSERT INTO api_keys (id, name, `key`, base_url, model, description, category, is_active) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-        [id, name, key, baseUrl, model, description, category, isActive]
+        'INSERT INTO api_keys (id, name, `key`, base_url, model, description, category, is_active, user_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+        [id, name, key, baseUrl, model, description, category, isActive, userId]
       );
       
-      const [newApiKey] = await query('SELECT * FROM api_keys WHERE id = ?', [id]);
+      const [newApiKey] = await query('SELECT * FROM api_keys WHERE id = ? AND user_id = ?', [id, userId]);
       res.status(201).json(toCamelCase([newApiKey])[0]);
     } else {
       const newApiKey = {
@@ -188,7 +193,8 @@ app.post('/api/api-keys', async (req, res) => {
         category,
         isActive,
         createdAt,
-        updatedAt
+        updatedAt,
+        userId
       };
       
       global.inMemoryApiKeys.push(newApiKey);
@@ -202,6 +208,7 @@ app.post('/api/api-keys', async (req, res) => {
 app.put('/api/api-keys/:id', async (req, res) => {
   try {
     const { id } = req.params;
+    const userId = req.user.userId;
     const {
       name,
       key,
@@ -214,7 +221,7 @@ app.put('/api/api-keys/:id', async (req, res) => {
     
     if (pool) {
       // Check if API key exists
-      const [existingApiKey] = await query('SELECT * FROM api_keys WHERE id = ?', [id]);
+      const [existingApiKey] = await query('SELECT * FROM api_keys WHERE id = ? AND user_id = ?', [id, userId]);
       
       if (!existingApiKey) {
         return res.status(404).json({ error: 'API key not found' });
@@ -222,14 +229,14 @@ app.put('/api/api-keys/:id', async (req, res) => {
       
       // Update API key
       await query(
-        'UPDATE api_keys SET name = ?, `key` = ?, base_url = ?, model = ?, description = ?, category = ?, is_active = ? WHERE id = ?',
-        [name, key, baseUrl, model, description, category, isActive, id]
+        'UPDATE api_keys SET name = ?, `key` = ?, base_url = ?, model = ?, description = ?, category = ?, is_active = ? WHERE id = ? AND user_id = ?',
+        [name, key, baseUrl, model, description, category, isActive, id, userId]
       );
       
-      const [updatedApiKey] = await query('SELECT * FROM api_keys WHERE id = ?', [id]);
+      const [updatedApiKey] = await query('SELECT * FROM api_keys WHERE id = ? AND user_id = ?', [id, userId]);
       res.json(toCamelCase([updatedApiKey])[0]);
     } else {
-      const apiKeyIndex = global.inMemoryApiKeys.findIndex(key => key.id === id);
+      const apiKeyIndex = global.inMemoryApiKeys.findIndex(key => key.id === id && key.userId === userId);
       
       if (apiKeyIndex === -1) {
         return res.status(404).json({ error: 'API key not found' });
@@ -258,20 +265,21 @@ app.put('/api/api-keys/:id', async (req, res) => {
 app.delete('/api/api-keys/:id', async (req, res) => {
   try {
     const { id } = req.params;
+    const userId = req.user.userId;
     
     if (pool) {
       // Check if API key exists
-      const [existingApiKey] = await query('SELECT * FROM api_keys WHERE id = ?', [id]);
+      const [existingApiKey] = await query('SELECT * FROM api_keys WHERE id = ? AND user_id = ?', [id, userId]);
       
       if (!existingApiKey) {
         return res.status(404).json({ error: 'API key not found' });
       }
       
       // Delete API key
-      await query('DELETE FROM api_keys WHERE id = ?', [id]);
+      await query('DELETE FROM api_keys WHERE id = ? AND user_id = ?', [id, userId]);
       res.status(204).send();
     } else {
-      const apiKeyIndex = global.inMemoryApiKeys.findIndex(key => key.id === id);
+      const apiKeyIndex = global.inMemoryApiKeys.findIndex(key => key.id === id && key.userId === userId);
       
       if (apiKeyIndex === -1) {
         return res.status(404).json({ error: 'API key not found' });
@@ -284,15 +292,6 @@ app.delete('/api/api-keys/:id', async (req, res) => {
     res.status(500).json({ error: 'Failed to delete API key' });
   }
 });
-
-// Serve static files in production
-if (process.env.NODE_ENV === 'production') {
-  app.use(express.static(join(__dirname, '../dist')));
-  
-  app.get('*', (req, res) => {
-    res.sendFile(join(__dirname, '../dist/index.html'));
-  });
-}
 
 // Start server
 app.listen(PORT, async () => {

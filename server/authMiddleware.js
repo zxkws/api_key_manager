@@ -1,31 +1,31 @@
 
 // 第三方鉴权 API 的 URL
-const THIRD_PARTY_AUTH_API_URL = 'https://example.com/auth'; 
+const THIRD_PARTY_AUTH_API_URL = 'https://api.zxkws.nyc.mn/api/v1/user'; 
 
 
-export const authMiddleware = async (req, res, next) => {
+export const authMiddleware = async (req, res, next) => {    
     const token = req.headers.authorization;
+    const cookieStr = req.headers.cookie;
 
-    if (!token) {
+    if (!token && !cookieStr) {
         return res.status(401).send({ message: 'No token provided' });
     }
 
     try {
         // 调用第三方 API 进行鉴权
         const response = await fetch(THIRD_PARTY_AUTH_API_URL, {
-            method: 'POST',
+            method: 'GET',
             headers: {
                 'Content-Type': 'application/json',
-                'Authorization': token
-            },
-            body: JSON.stringify({})
+                'Authorization': token,
+                'Cookie': cookieStr
+            }
         });
 
-        console.log(response)
+        const data = await response.json();
 
-        if (response.ok) {
-            // 鉴权成功，将用户信息挂载到请求对象上
-            req.user = response.data;
+        if (data && !data.error) {
+            req.user = data;
             next();
         } else {
             // 鉴权失败
