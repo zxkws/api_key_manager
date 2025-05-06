@@ -4,6 +4,7 @@ import mysql from 'mysql2/promise';
 import dotenv from 'dotenv';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
+import { authMiddleware } from './authMiddleware.js';
 
 // Load environment variables
 dotenv.config();
@@ -108,6 +109,8 @@ function toCamelCase(rows) {
 
 // Initialize data store if database connection fails
 global.inMemoryApiKeys = [];
+
+app.use(authMiddleware);
 
 // API Routes
 app.get('/api/api-keys', async (req, res) => {

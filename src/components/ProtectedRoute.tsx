@@ -7,15 +7,15 @@ interface ProtectedRouteProps {
 }
 
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
-  // const { isAuthenticated } = useAuth();
-  // const location = useLocation();
+  const { isAuthenticated } = useAuth();
+  const location = useLocation();
 
-  // if (!isAuthenticated) {
-  //   // Redirect to your existing auth system's login page
-  //   // Replace this URL with your actual auth system login URL
-  //   window.location.href = `${import.meta.env.VITE_AUTH_URL || 'https://zxkws.nyc.mn'}/login?redirect=${window.location.origin}${location.pathname}`;
-  //   return null;
-  // }
+  if (!isAuthenticated) {
+    // Redirect to your existing auth system's login page
+    // Replace this URL with your actual auth system login URL
+    window.location.href = `${import.meta.env.VITE_AUTH_URL || 'https://zxkws.nyc.mn'}/login?redirect=${window.location.origin}${location.pathname}`;
+    return null;
+  }
 
   return <>{children}</>;
 };
