@@ -14,6 +14,7 @@ export class ApiClient {
 
   private handleUnauthorized() {
     const currentUrl = encodeURIComponent(window.location.href);
+    console.log(currentUrl, window.location.href);
     window.location.href = `${AUTH_URL}/login?redirect=${currentUrl}`;
   }
 
