@@ -1,7 +1,7 @@
 import { ApiError } from '../types';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
-const AUTH_URL = import.meta.env.VITE_AUTH_URL;
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://apikeymanage.lookli.nyc.mn/api';
+const AUTH_URL = import.meta.env.VITE_AUTH_URL || 'https://zxkws.nyc.mn';
 
 export class ApiClient {
   private getHeaders(): HeadersInit {
