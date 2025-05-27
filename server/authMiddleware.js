@@ -22,9 +22,9 @@ export const authMiddleware = async (req, res, next) => {
             }
         });
 
-        const data = await response.json();
+        const {data} = await response.json();
 
-        if (data && !data.error) {
+        if (data) {
             req.user = data;
             next();
         } else {
