@@ -31,6 +31,7 @@ export class ApiClient {
           ...headers,
           ...options.headers,
         },
+        credentials: "include",
       });
 
       if (response.status === 401) {
